@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>23sekunder</title>
+
+<style>
+body {
+    margin: 0;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 { margin-top: 40px; font-size: 3rem; }
+
+#info { font-size: 1.5rem; margin-top: 20px; }
+
+#scoreboard {
+    margin-top: 40px;
+    width: 300px;
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<h1>23sekunder</h1>
+<div id="info">Trykk SPACE for å starte</div>
+<div id="scoreboard"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// 🔹 LIM INN DIN firebaseConfig HER
+const firebaseConfig = {
+  apiKey: "AIzaSyAJ_Wm9KcOJugO-BVIRq5j8VqEZxix47UE",
+  authDomain: "sekund-3ec3c.firebaseapp.com",
+  projectId: "sekund-3ec3c",
+  storageBucket: "sekund-3ec3c.firebasestorage.app",
+  messagingSenderId: "367243247257",
+  appId: "1:367243247257:web:6a6b8171d741552e58c208"
+
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let startTime = null;
+let running = false;
+const goal = 23;
+
+const info = document.getElementById("info");
+const scoreboardDiv = document.getElementById("scoreboard");
+
+async function renderScores() {
+    const q = query(collection(db, "scores"), orderBy("diff"), limit(10));
+    const querySnapshot = await getDocs(q);
+
+    let html = "<h3>Highscore</h3>";
+    let i = 1;
+
+    querySnapshot.forEach((doc) => {
+        const s = doc.data();
+        html += `${i}. ${s.name} – ${s.diff.toFixed(2)} sek<br>`;
+        i++;
+    });
+
+    scoreboardDiv.innerHTML = html;
+}
+
+document.addEventListener("keydown", async function(e) {
+    if (e.code === "Space") {
+
+        if (!running) {
+            startTime = Date.now();
+            running = true;
+            info.textContent = "Tidtaker startet...";
+        } 
+        
+        else {
+            const endTime = Date.now();
+            const seconds = (endTime - startTime) / 1000;
+            const difference = Math.abs(seconds - goal);
+
+            let name = prompt("Navn:");
+            if (!name) name = "Anonym";
+
+            await addDoc(collection(db, "scores"), {
+                name: name,
+                diff: difference,
+                created: Date.now()
+            });
+
+            info.innerHTML = `
+                Du stoppet på ${seconds.toFixed(2)} sekunder.<br>
+                Avvik: ${difference.toFixed(2)} sekunder.<br><br>
+                Trykk SPACE for å spille igjen
+            `;
+
+            running = false;
+            renderScores();
+        }
+    }
+});
+
+renderScores();
+</script>
+
+</body>
+</html>
